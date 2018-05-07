@@ -46,7 +46,11 @@ public class AutoPaly implements AutoCloseable {
 
         try (AutoPaly autoPaly = new AutoPaly()) {
 
+            long startTime = System.currentTimeMillis();
+
             List<ChallengeResult> results = autoPaly.playAllChallenge(script, numberOfPlay);
+
+            long totalTime = System.currentTimeMillis() - startTime;
 
             int allTotalCount = results.stream()
                     .map(ChallengeResult::getTotalCount)
@@ -57,11 +61,17 @@ public class AutoPaly implements AutoCloseable {
                     .map(ChallengeResult::getSuccessCount)
                     .mapToInt(Integer::intValue)
                     .sum();
-            
+
+            System.out.println(
+                    String.format(
+                            "Total time: %,d seconds",
+                            totalTime / 1000));
+
+            System.out.println("--------------------------------------------");
             System.out.println(
                     String.format(
                             "All         : %6.2f (%d/%d)",
-                            allSuccessCount / (double)allTotalCount * 100,
+                            allSuccessCount / (double) allTotalCount * 100,
                             allSuccessCount,
                             allTotalCount));
 
@@ -70,10 +80,11 @@ public class AutoPaly implements AutoCloseable {
                         String.format(
                                 "Challenge %2d: %6.2f (%d/%d)",
                                 result.getChallengeNumber(),
-                                result.getSuccessCount() / (double)result.getTotalCount() * 100,
+                                result.getSuccessCount() / (double) result.getTotalCount() * 100,
                                 result.getSuccessCount(),
                                 result.getTotalCount()));
             }
+            System.out.println("--------------------------------------------");
         }
     }
 
@@ -82,9 +93,11 @@ public class AutoPaly implements AutoCloseable {
         int successCount = 0;
         int failedCount = 0;
 
+        setup(challengeNumber, script);
+        
         for (int i = 0; i < numberOfPlay; i++) {
 
-            boolean successed = playOne(challengeNumber, script);
+            boolean successed = run();
 
             if (successed) {
                 successCount++;
@@ -103,7 +116,20 @@ public class AutoPaly implements AutoCloseable {
                 .collect(Collectors.toList());
     }
 
-    private boolean playOne(int challengeNumber, String script) {
+    private boolean run() {
+
+        // 実行
+        driver.findElement(By.cssSelector("#button_apply")).click();
+
+        // 結果取得(待ち合わせ)
+        WebDriverWait wait = new WebDriverWait(driver, 60);
+        WebElement feedbackElement = wait
+                .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".feedback h2")));
+
+        return feedbackElement.getText().equals("Success!");
+    }
+
+    private void setup(int challengeNumber, String script) {
 
         driver.get("https://play.elevatorsaga.com/#challenge=" + challengeNumber);
 
@@ -132,16 +158,6 @@ public class AutoPaly implements AutoCloseable {
                 .sendKeys(Keys.chord(Keys.CONTROL, "v"))
                 .build()
                 .perform();
-
-        // 実行
-        driver.findElement(By.cssSelector("#button_apply")).click();
-
-        // 結果取得(待ち合わせ)
-        WebDriverWait wait = new WebDriverWait(driver, 10);
-        WebElement feedbackElement = wait
-                .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".feedback h2")));
-
-        return feedbackElement.getText().equals("Success!");
     }
 
     @Override
