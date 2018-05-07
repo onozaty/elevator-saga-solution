@@ -1,0 +1,21 @@
+{
+    init: function(elevators, floors) {
+        var rotator = 0;
+        _.each(floors, function(floor) {
+            floor.on("up_button_pressed down_button_pressed", function() {
+                var elevator = elevators[(rotator++) % elevators.length];
+                elevator.goToFloor(floor.level);
+            }); 
+        });
+        _.each(elevators, function(elevator) {
+            elevator.on("floor_button_pressed", function(floorNum) {
+                elevator.goToFloor(floorNum);
+            });
+            elevator.on("idle", function() {
+                elevator.goToFloor(0);
+            });
+        });
+    },
+    update: function(dt, elevators, floors) {
+    }
+}
