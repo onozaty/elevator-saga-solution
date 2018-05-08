@@ -13,6 +13,45 @@
         // 関数
         // -------------------------------
 
+        // ボタンが押下されているフロアの情報を取得する関数
+        const getPushedFloorButtons = () => {
+            
+            const pushedFloorButtons = [];
+            for (let floorNum = minFloorNum; floorNum <= maxFloorNum; floorNum++) {
+
+                if (floorButton[floorNum].up) {
+                    pushedFloorButtons.push({
+                        floorNum: floorNum,
+                        indicator: "up"
+                    });
+                }
+
+                if (floorButton[floorNum].down) {
+                    pushedFloorButtons.push({
+                        floorNum: floorNum,
+                        indicator: "down"
+                    });
+                }
+            }
+            
+            return pushedFloorButtons;
+        }
+
+        // 他のエレベータが現在向かっているフロアの情報を取得する関数
+        const getOtherElevatorGoFloors = (targetElevator) => {
+            
+            return elevators
+                .filter(elevator => elevator != targetElevator)
+                .map((otherElevator) => {
+                    return {
+                        elevatorNumber: otherElevator.number,
+                        floorNum: otherElevator.destinationQueue[0],
+                        up: otherElevator.goingUpIndicator(),
+                        down: otherElevator.goingDownIndicator()
+                    };
+                });
+        }
+
         // 指定したエレベータをボタンが押下されている他のフロアに移動させる関数
         const goToPressedFloor = (elevator, currentFloorNum) => {
 
@@ -23,24 +62,24 @@
             // フロアのボタン押下状況と、各エレベータが現在向かっているフロアの情報を元に
             // 候補となる移動先一覧を作成
 
+            // 他のエレベータが現在向かっているフロアの情報
+            const otherElevatorGoFloors = getOtherElevatorGoFloors(elevator);
+
             // 移動先候補
-            const gotoChoices = [];
-            for (let floorNum = minFloorNum; floorNum <= maxFloorNum; floorNum++) {
+            const gotoChoices = getPushedFloorButtons().filter((pushedFloorButton) => {
+                // 他のエレベータが向かっているフロア＆方向は除外
+                return !otherElevatorGoFloors.some((otherElevatorGoFloor) => {
+                    return pushedFloorButton.floorNum == otherElevatorGoFloor.floorNum
+                            && ((pushedFloorButton.indicator == "up" && otherElevatorGoFloor.up)
+                                || (pushedFloorButton.indicator == "down" && otherElevatorGoFloor.down));
+                })
+            });
 
-                let gotoChoice = {
-                    floorNum: floorNum,
-                    up: floorButton[floorNum].up,
-                    down: floorButton[floorNum].down
-                };
-
-                if (gotoChoice.up || gotoChoice.down) {
-                    gotoChoices.push(gotoChoice);
-                }
-            }
-
-            console.log(`elevator${elevator.number} [goToPressedFloor] floorButton gotoChoices`)
-            console.log(JSON.stringify(floorButton)); // 現時点のもので出しておかないと変わってしまうので
-            console.log(gotoChoices);
+            console.log(
+                `elevator${elevator.number} [goToPressedFloor]`
+                + ` otherElevatorGoFloors:${JSON.stringify(otherElevatorGoFloors)}`
+                + ` floorButton:${JSON.stringify(floorButton)}`
+                + ` gotoChoices:${JSON.stringify(gotoChoices)}`);
 
             if (gotoChoices.length == 0) {
                 // 移動先候補無し
@@ -68,12 +107,13 @@
                     return gotoChoice1.floorNum - gotoChoice2.floorNum;
                 }
             })[0];
-
-            console.log(`elevator${elevator.number} [goToPressedFloor] nearGotoChoice`);
-            console.log(nearGotoChoice);
+            
+            console.log(
+                `elevator${elevator.number} [goToPressedFloor]`
+                + ` nearGotoChoice:${JSON.stringify(nearGotoChoice)}`);
 
             // 移動
-            if (nearGotoChoice.up) {
+            if (nearGotoChoice.indicator == "up") {
                 elevator.goingUpIndicator(true);
                 elevator.goingDownIndicator(false);
             } else {
@@ -82,7 +122,7 @@
             }
             elevator.goToFloor(nearGotoChoice.floorNum);
         }
-
+            
         // 一番近くいる停止中のエレベータを取得する関数
         const pickupStoppedNearElevator = (floorNum) => {
 
@@ -218,19 +258,36 @@
             elevator.on("passing_floor", (floorNum, direction) => {
                 console.log(`elevator${elevator.number} [passing_floor] floorNum:${floorNum}`);
 
+                // 最初の乗客を拾いに行く状態の場合、最新の状況による移動先を再設定
+                // (移動中に近いフロアで押されている可能性があるため)
+                if (elevator.loadFactor() == 0) {
+                    goToPressedFloor(elevator, floorNum);
+                    return;
+                }
+
                 // フロア通過前に
                 // ・進行方向と同じボタンが押下されている
                 // ・乗車できる余裕がある
+                // ・他のエレベータが止まろうとしていない
                 // 場合には、フロアに止まって人を乗せる
-                if (floorButton[floorNum][direction] && elevator.loadFactor() < 1) {
-                    elevator.goToFloor(floorNum, true);
-                }
+                const otherElevatorGoFloors = getOtherElevatorGoFloors(elevator);
+                const isOtherElevetorStop = otherElevatorGoFloors.some((elevatorGoFloor) => {
+                    return elevatorGoFloor.floorNum == floorNum
+                        && ((direction == "up" && elevatorGoFloor.up)
+                            || (direction == "down" && elevatorGoFloor.down));
+                });
 
                 console.log(
-                    `elevator${elevator.number}`
-                    + ` [passing_floor] loadFactor:${elevator.loadFactor()}`)
-                console.log(`elevator${elevator.number} [passing_floor] floorButton`)
-                console.log(JSON.stringify(floorButton)); // 現時点のもので出しておかないと変わってしまうので
+                    `elevator${elevator.number} [passing_floor]`
+                    + ` isOtherElevetorStop:${isOtherElevetorStop}`
+                    + ` loadFactor:${elevator.loadFactor()}`
+                    + ` otherElevatorGoFloors:${JSON.stringify(otherElevatorGoFloors)}`
+                    + ` floorButton:${JSON.stringify(floorButton)}`);
+
+                if (floorButton[floorNum][direction] && elevator.loadFactor() < 1.0 && !isOtherElevetorStop) {
+                    console.log(`elevator${elevator.number} [passing_floor] stop next floor:${floorNum}`);
+                    elevator.goToFloor(floorNum, true);
+                }
             });
 
             elevator.on("idle", () => {
