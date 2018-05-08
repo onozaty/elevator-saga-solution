@@ -18,7 +18,7 @@
 
         // ボタンが押下されているフロアの情報を取得する関数
         this.getPushedFloorButtons = () => {
-            
+
             const pushedFloorButtons = [];
             for (let floorNum = minFloorNum; floorNum <= maxFloorNum; floorNum++) {
 
@@ -36,13 +36,13 @@
                     });
                 }
             }
-            
+
             return pushedFloorButtons;
         }
 
         // 他のエレベータが現在向かっているフロアの情報を取得する関数
         this.getOtherElevatorGoFloors = (targetElevator) => {
-            
+
             return elevators
                 .filter(elevator => elevator != targetElevator)
                 .map((otherElevator) => {
@@ -104,7 +104,7 @@
                 // 大きいフロアを優先
                 return gotoChoice2.floorNum - gotoChoice1.floorNum;
             })[0];
-            
+
             console.log(
                 `elevator${elevator.number} [goToPressedFloor]`
                 + ` nearGotoChoice:${JSON.stringify(nearGotoChoice)}`);
@@ -119,10 +119,10 @@
             }
             elevator.goToFloor(nearGotoChoice.floorNum);
         }
-            
+
         // 一番近くいる停止中で乗客がいないエレベータを取得する関数
         this.pickupStoppedNearElevator = (floorNum) => {
-            
+
             return elevators
                 .filter((elevator) => {
                     return elevator.destinationQueue.length == 0 && elevator.loadFactor() == 0;
@@ -139,10 +139,11 @@
             const currentFloorNum = elevator.currentFloor();
 
             console.log(
-                `[resetDestination] currentFloorNum:${currentFloorNum}`
-                                + ` getPressedFloors:${elevator.getPressedFloors()}`
-                                + ` goingUpIndicator:${elevator.goingUpIndicator()}`
-                                + ` goingDownIndicator:${elevator.goingDownIndicator()}`);
+                `elevator${elevator.number} [resetDestination]`
+                + ` currentFloorNum:${currentFloorNum}`
+                + ` getPressedFloors:${elevator.getPressedFloors()}`
+                + ` goingUpIndicator:${elevator.goingUpIndicator()}`
+                + ` goingDownIndicator:${elevator.goingDownIndicator()}`);
 
             // 現在フロアの上下で分けてソート(現在フロアから近い順に)
             const uppers = elevator.getPressedFloors()
@@ -157,12 +158,11 @@
 
             // 進行方向に行き先フロア無しの場合、方向を反転
             if (elevator.goingUpIndicator() && uppers.length == 0) {
-               elevator.goingUpIndicator(false);
-               elevator.goingDownIndicator(true);
-            }
-            if (elevator.goingDownIndicator() && lowers.length == 0) {
-               elevator.goingUpIndicator(true);
-               elevator.goingDownIndicator(false);
+                elevator.goingUpIndicator(false);
+                elevator.goingDownIndicator(true);
+            } else if (elevator.goingDownIndicator() && lowers.length == 0) {
+                elevator.goingUpIndicator(true);
+                elevator.goingDownIndicator(false);
             }
 
             // 現在の進行方向にあわせてキューに追加
@@ -172,7 +172,9 @@
                 elevator.destinationQueue = lowers.concat(uppers);
             }
 
-            console.log(`[resetDestination] destinationQueue:${elevator.destinationQueue}`);
+            console.log(
+                `elevator${elevator.number} [resetDestination]`
+                + ` destinationQueue:${elevator.destinationQueue}`);
 
             elevator.checkDestinationQueue();
         }
@@ -192,12 +194,13 @@
 
                 // 停止中のエレベータがあれば向かわせる
                 const stoppedElevator = this.pickupStoppedNearElevator(floorNum);
-                console.log(`floor${floorNum} [up_button_pressed] stoppedElevator`);
-                console.log(stoppedElevator);
                 if (stoppedElevator) {
                     stoppedElevator.goingUpIndicator(true);
                     stoppedElevator.goingDownIndicator(false);
                     stoppedElevator.goToFloor(floorNum);
+
+                    console.log(
+                        `floor${floorNum} [up_button_pressed] gotoElevatorNumber:${stoppedElevator.number}`);
                 }
             });
 
@@ -209,12 +212,13 @@
 
                 // 停止中のエレベータがあれば向かわせる
                 const stoppedElevator = this.pickupStoppedNearElevator(floorNum);
-                console.log(`floor${floorNum} [down_button_pressed] stoppedElevator`);
-                console.log(stoppedElevator);
                 if (stoppedElevator) {
                     stoppedElevator.goingUpIndicator(false);
                     stoppedElevator.goingDownIndicator(true);
                     stoppedElevator.goToFloor(floorNum);
+
+                    console.log(
+                        `floor${floorNum} [down_button_pressed] gotoElevatorNumber:${stoppedElevator.number}`);
                 }
             });
         });
@@ -229,19 +233,21 @@
 
             elevator.on("stopped_at_floor", (floorNum) => {
                 console.log(
-                    `elevator${elevator.number}`
-                    + ` [stopped_at_floor] floorNum:${floorNum} destinationQueue:${elevator.destinationQueue}`);
+                    `elevator${elevator.number} [stopped_at_floor]`
+                    + ` floorNum:${floorNum} destinationQueue:${elevator.destinationQueue}`);
 
                 // 最後の停止フロアの場合
                 // 該当のフロアでボタンが押下されているならば、その方向で設定
                 if (elevator.destinationQueue.length == 0) {
-                    if (floorButton[floorNum].up) {
+
+                    if (floorButton[floorNum].up && !floorButton[floorNum].down) {
                         elevator.goingUpIndicator(true);
                         elevator.goingDownIndicator(false);
-                    } else if (floorButton[floorNum].down) {
+                    } else if (!floorButton[floorNum].up && floorButton[floorNum].down) {
                         elevator.goingUpIndicator(false);
                         elevator.goingDownIndicator(true);
                     }
+                    // up/downどちらも押されている場合は、方向を変えない(そのままの方向を優先)
                 }
 
                 // フロアに到着したら、進行方向に応じたボタンをクリア
@@ -260,7 +266,7 @@
                     elevator.goingDownIndicator(true);
                 }
             })
-            
+
             elevator.on("passing_floor", (floorNum, direction) => {
                 console.log(`elevator${elevator.number} [passing_floor] floorNum:${floorNum}`);
 
@@ -322,7 +328,7 @@
                 this.resetDestination(elevator);
             });
         });
-    
+
     },
     update: function(dt, elevators, floors) {
         // We normally don't need to do anything here
