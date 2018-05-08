@@ -1,6 +1,9 @@
 {
     init: function(elevators, floors) {
 
+        // クリア条件が移動回数の場合、それを優先した形で動作させる
+        this.clearConditionIsMoves = ["#challenge=6", "#challenge=7"].includes(location.hash);
+
         // 最小/最大フロア番号
         const minFloorNum = Math.min.apply(null, floors.map(floor => floor.floorNum()));
         const maxFloorNum = Math.max.apply(null, floors.map(floor => floor.floorNum()));
@@ -14,7 +17,7 @@
         // -------------------------------
 
         // ボタンが押下されているフロアの情報を取得する関数
-        const getPushedFloorButtons = () => {
+        this.getPushedFloorButtons = () => {
             
             const pushedFloorButtons = [];
             for (let floorNum = minFloorNum; floorNum <= maxFloorNum; floorNum++) {
@@ -38,7 +41,7 @@
         }
 
         // 他のエレベータが現在向かっているフロアの情報を取得する関数
-        const getOtherElevatorGoFloors = (targetElevator) => {
+        this.getOtherElevatorGoFloors = (targetElevator) => {
             
             return elevators
                 .filter(elevator => elevator != targetElevator)
@@ -53,7 +56,7 @@
         }
 
         // 指定したエレベータをボタンが押下されている他のフロアに移動させる関数
-        const goToPressedFloor = (elevator, currentFloorNum) => {
+        this.goToPressedFloor = (elevator, currentFloorNum) => {
 
             // いったん移動先をクリア
             elevator.destinationQueue = [];
@@ -63,10 +66,10 @@
             // 候補となる移動先一覧を作成
 
             // 他のエレベータが現在向かっているフロアの情報
-            const otherElevatorGoFloors = getOtherElevatorGoFloors(elevator);
+            const otherElevatorGoFloors = this.getOtherElevatorGoFloors(elevator);
 
             // 移動先候補
-            const gotoChoices = getPushedFloorButtons().filter((pushedFloorButton) => {
+            const gotoChoices = this.getPushedFloorButtons().filter((pushedFloorButton) => {
                 // 他のエレベータが向かっているフロア＆方向は除外
                 return !otherElevatorGoFloors.some((otherElevatorGoFloor) => {
                     return pushedFloorButton.floorNum == otherElevatorGoFloor.floorNum
@@ -98,14 +101,8 @@
                 }
 
                 // 現在のフロアからの距離が一緒の場合
-                // 進行方向のフロアを優先
-                if (elevator.goingUpIndicator()) {
-                    // 上へ向かっている場合、大きいフロアを優先
-                    return gotoChoice2.floorNum - gotoChoice1.floorNum;
-                } else {
-                    // 下へ向かっている場合、小さいフロアを優先
-                    return gotoChoice1.floorNum - gotoChoice2.floorNum;
-                }
+                // 大きいフロアを優先
+                return gotoChoice2.floorNum - gotoChoice1.floorNum;
             })[0];
             
             console.log(
@@ -123,20 +120,21 @@
             elevator.goToFloor(nearGotoChoice.floorNum);
         }
             
-        // 一番近くいる停止中のエレベータを取得する関数
-        const pickupStoppedNearElevator = (floorNum) => {
-
-            return elevators.filter((elevator) => {
-                return elevator.destinationQueue.length == 0;
-            })
-            .sort((elevator1, elevator2) => {
-                return Math.abs(elevator1.currentFloor() - floorNum)
-                        - Math.abs(elevator2.currentFloor() - floorNum);
-            })[0];
+        // 一番近くいる停止中で乗客がいないエレベータを取得する関数
+        this.pickupStoppedNearElevator = (floorNum) => {
+            
+            return elevators
+                .filter((elevator) => {
+                    return elevator.destinationQueue.length == 0 && elevator.loadFactor() == 0;
+                })
+                .sort((elevator1, elevator2) => {
+                    return Math.abs(elevator1.currentFloor() - floorNum)
+                            - Math.abs(elevator2.currentFloor() - floorNum);
+                })[0];
         }
 
         // エレベータの行き先を再設定する関数
-        const resetDestination = (elevator) => {
+        this.resetDestination = (elevator) => {
 
             const currentFloorNum = elevator.currentFloor();
 
@@ -193,7 +191,7 @@
                 floorButton[floorNum].up = true;
 
                 // 停止中のエレベータがあれば向かわせる
-                const stoppedElevator = pickupStoppedNearElevator(floorNum);
+                const stoppedElevator = this.pickupStoppedNearElevator(floorNum);
                 console.log(`floor${floorNum} [up_button_pressed] stoppedElevator`);
                 console.log(stoppedElevator);
                 if (stoppedElevator) {
@@ -210,7 +208,7 @@
                 floorButton[floorNum].down = true;
 
                 // 停止中のエレベータがあれば向かわせる
-                const stoppedElevator = pickupStoppedNearElevator(floorNum);
+                const stoppedElevator = this.pickupStoppedNearElevator(floorNum);
                 console.log(`floor${floorNum} [down_button_pressed] stoppedElevator`);
                 console.log(stoppedElevator);
                 if (stoppedElevator) {
@@ -253,6 +251,14 @@
                 if (elevator.goingDownIndicator()) {
                     floorButton[floorNum].down = false;
                 }
+
+                if (this.clearConditionIsMoves && elevator.loadFactor() < 0.5) {
+                    // 移動回数がクリア条件の場合
+                    // 人が少なかった場合には、いったん停止し、乗客を乗せるためにインジケータを両方つける
+                    elevator.stop();
+                    elevator.goingUpIndicator(true);
+                    elevator.goingDownIndicator(true);
+                }
             })
             
             elevator.on("passing_floor", (floorNum, direction) => {
@@ -261,7 +267,7 @@
                 // 最初の乗客を拾いに行く状態の場合、最新の状況による移動先を再設定
                 // (移動中に近いフロアで押されている可能性があるため)
                 if (elevator.loadFactor() == 0) {
-                    goToPressedFloor(elevator, floorNum);
+                    this.goToPressedFloor(elevator, floorNum);
                     return;
                 }
 
@@ -270,7 +276,7 @@
                 // ・乗車できる余裕がある
                 // ・他のエレベータが止まろうとしていない
                 // 場合には、フロアに止まって人を乗せる
-                const otherElevatorGoFloors = getOtherElevatorGoFloors(elevator);
+                const otherElevatorGoFloors = this.getOtherElevatorGoFloors(elevator);
                 const isOtherElevetorStop = otherElevatorGoFloors.some((elevatorGoFloor) => {
                     return elevatorGoFloor.floorNum == floorNum
                         && ((direction == "up" && elevatorGoFloor.up)
@@ -293,20 +299,42 @@
             elevator.on("idle", () => {
                 console.log(`elevator${elevator.number} [idle]`);
 
+                if (this.clearConditionIsMoves && elevator.loadFactor() < 0.5) {
+                    // 移動回数がクリア条件の場合
+                    // なるべく人数を多く乗せてから移動する
+                    return;
+                }
+                
                 // 行き先フロアが無くなったら、ボタンが押下されている他のフロアに移動
-                goToPressedFloor(elevator, elevator.currentFloor());
+                this.goToPressedFloor(elevator, elevator.currentFloor());
             });
             
             elevator.on("floor_button_pressed", (floorNum) => {
                 console.log(`elevator${elevator.number} [floor_button_pressed] floorNum:${floorNum}`);
 
+                if (this.clearConditionIsMoves && elevator.loadFactor() < 0.5) {
+                    // 移動回数がクリア条件の場合
+                    // なるべく人数を多く乗せてから移動する
+                    return;
+                }
+
                 // 行き先を再設定
-                resetDestination(elevator);
+                this.resetDestination(elevator);
             });
         });
     
     },
     update: function(dt, elevators, floors) {
         // We normally don't need to do anything here
+
+        if (this.clearConditionIsMoves) {
+            // 移動回数がクリア条件の場合
+
+            // 負荷率を見て動作を止めたままになっているエレベータが存在する場合があるため
+            // 定期的に乗客率を見て移動させる
+            elevators
+                .filter(elevator => elevator.loadFactor() >= 0.5)
+                .forEach(elevator => this.resetDestination(elevator));
+        }
     }
 }
