@@ -39,16 +39,14 @@ public class AutoPalyTest {
         Path scriptPath = Paths.get(AutoPalyTest.class.getResource("script.txt").toURI());
         String script = new String(Files.readAllBytes(scriptPath), StandardCharsets.UTF_8);
 
-        try (AutoPaly autoPaly = new AutoPaly()) {
-            List<ChallengeResult> results = autoPaly.playAllChallenge(script, 2);
+        List<ChallengeResult> results = AutoPaly.playAllChallenge(script, 2);
 
-            assertThat(results)
-                    .extracting(ChallengeResult::getChallengeNumber)
-                    .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18);
-            assertThat(results)
-                    .extracting(x -> x.getSuccessCount() + x.getFailedCount())
-                    .containsOnly(2);
-        }
+        assertThat(results)
+                .extracting(ChallengeResult::getChallengeNumber)
+                .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18);
+        assertThat(results)
+                .extracting(x -> x.getSuccessCount() + x.getFailedCount())
+                .containsOnly(2);
     }
 
 }

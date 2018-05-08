@@ -44,48 +44,45 @@ public class AutoPaly implements AutoCloseable {
             System.setProperty("webdriver.chrome.driver", "driver/chromedriver.exe");
         }
 
-        try (AutoPaly autoPaly = new AutoPaly()) {
+        long startTime = System.currentTimeMillis();
 
-            long startTime = System.currentTimeMillis();
+        List<ChallengeResult> results = playAllChallenge(script, numberOfPlay);
 
-            List<ChallengeResult> results = autoPaly.playAllChallenge(script, numberOfPlay);
+        long totalTime = System.currentTimeMillis() - startTime;
 
-            long totalTime = System.currentTimeMillis() - startTime;
+        int allTotalCount = results.stream()
+                .map(ChallengeResult::getTotalCount)
+                .mapToInt(Integer::intValue)
+                .sum();
 
-            int allTotalCount = results.stream()
-                    .map(ChallengeResult::getTotalCount)
-                    .mapToInt(Integer::intValue)
-                    .sum();
+        int allSuccessCount = results.stream()
+                .map(ChallengeResult::getSuccessCount)
+                .mapToInt(Integer::intValue)
+                .sum();
 
-            int allSuccessCount = results.stream()
-                    .map(ChallengeResult::getSuccessCount)
-                    .mapToInt(Integer::intValue)
-                    .sum();
+        System.out.println(
+                String.format(
+                        "Total time: %,d seconds",
+                        totalTime / 1000));
 
+        System.out.println("--------------------------------------------");
+        System.out.println(
+                String.format(
+                        "All         : %6.2f (%d/%d)",
+                        allSuccessCount / (double) allTotalCount * 100,
+                        allSuccessCount,
+                        allTotalCount));
+
+        for (ChallengeResult result : results) {
             System.out.println(
                     String.format(
-                            "Total time: %,d seconds",
-                            totalTime / 1000));
-
-            System.out.println("--------------------------------------------");
-            System.out.println(
-                    String.format(
-                            "All         : %6.2f (%d/%d)",
-                            allSuccessCount / (double) allTotalCount * 100,
-                            allSuccessCount,
-                            allTotalCount));
-
-            for (ChallengeResult result : results) {
-                System.out.println(
-                        String.format(
-                                "Challenge %2d: %6.2f (%d/%d)",
-                                result.getChallengeNumber(),
-                                result.getSuccessCount() / (double) result.getTotalCount() * 100,
-                                result.getSuccessCount(),
-                                result.getTotalCount()));
-            }
-            System.out.println("--------------------------------------------");
+                            "Challenge %2d: %6.2f (%d/%d)",
+                            result.getChallengeNumber(),
+                            result.getSuccessCount() / (double) result.getTotalCount() * 100,
+                            result.getSuccessCount(),
+                            result.getTotalCount()));
         }
+        System.out.println("--------------------------------------------");
     }
 
     public ChallengeResult play(int challengeNumber, String script, int numberOfPlay) {
@@ -94,7 +91,7 @@ public class AutoPaly implements AutoCloseable {
         int failedCount = 0;
 
         setup(challengeNumber, script);
-        
+
         for (int i = 0; i < numberOfPlay; i++) {
 
             boolean successed = run();
@@ -109,10 +106,15 @@ public class AutoPaly implements AutoCloseable {
         return new ChallengeResult(challengeNumber, successCount, failedCount);
     }
 
-    public List<ChallengeResult> playAllChallenge(String script, int numberOfPlay) {
+    public static List<ChallengeResult> playAllChallenge(String script, int numberOfPlay) {
 
         return ALL_CHALLENGE_NUMBERS.stream()
-                .map(x -> play(x, script, numberOfPlay))
+                .parallel()
+                .map(x -> {
+                    try (AutoPaly autoPaly = new AutoPaly()) {
+                        return autoPaly.play(x, script, numberOfPlay);
+                    }
+                })
                 .collect(Collectors.toList());
     }
 
