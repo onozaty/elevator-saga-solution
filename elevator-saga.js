@@ -231,6 +231,11 @@
             // ログ用にエレベータに番号を付与
             elevator.number = elevators.indexOf(elevator);
 
+            // エレベータが混んでいるかを判定する関数追加
+            elevator.isCrowded = () => {
+                return elevator.loadFactor() >= 0.5;
+            }
+
             elevator.on("stopped_at_floor", (floorNum) => {
                 console.log(
                     `elevator${elevator.number} [stopped_at_floor]`
@@ -258,7 +263,7 @@
                     floorButton[floorNum].down = false;
                 }
 
-                if (this.clearConditionIsMoves && elevator.loadFactor() < 0.5) {
+                if (this.clearConditionIsMoves && !elevator.isCrowded()) {
                     // 移動回数がクリア条件の場合
                     // 人が少なかった場合には、いったん停止し、乗客を乗せるためにインジケータを両方つける
                     elevator.stop();
@@ -296,7 +301,7 @@
                     + ` otherElevatorGoFloors:${JSON.stringify(otherElevatorGoFloors)}`
                     + ` floorButton:${JSON.stringify(floorButton)}`);
 
-                if (floorButton[floorNum][direction] && elevator.loadFactor() < 1.0 && !isOtherElevetorStop) {
+                if (floorButton[floorNum][direction] && !elevator.isCrowded() && !isOtherElevetorStop) {
                     console.log(`elevator${elevator.number} [passing_floor] stop next floor:${floorNum}`);
                     elevator.goToFloor(floorNum, true);
                 }
@@ -305,7 +310,7 @@
             elevator.on("idle", () => {
                 console.log(`elevator${elevator.number} [idle]`);
 
-                if (this.clearConditionIsMoves && elevator.loadFactor() < 0.5) {
+                if (this.clearConditionIsMoves && !elevator.isCrowded()) {
                     // 移動回数がクリア条件の場合
                     // なるべく人数を多く乗せてから移動する
                     return;
@@ -318,7 +323,7 @@
             elevator.on("floor_button_pressed", (floorNum) => {
                 console.log(`elevator${elevator.number} [floor_button_pressed] floorNum:${floorNum}`);
 
-                if (this.clearConditionIsMoves && elevator.loadFactor() < 0.5) {
+                if (this.clearConditionIsMoves && !elevator.isCrowded()) {
                     // 移動回数がクリア条件の場合
                     // なるべく人数を多く乗せてから移動する
                     return;
@@ -339,7 +344,7 @@
             // 負荷率を見て動作を止めたままになっているエレベータが存在する場合があるため
             // 定期的に乗客率を見て移動させる
             elevators
-                .filter(elevator => elevator.loadFactor() >= 0.5)
+                .filter(elevator => elevator.isCrowded())
                 .forEach(elevator => this.resetDestination(elevator));
         }
     }
