@@ -46,12 +46,36 @@
             return elevators
                 .filter(elevator => elevator != targetElevator)
                 .map((otherElevator) => {
-                    return {
+
+                    otherElevatorGoFloor = {
                         elevatorNumber: otherElevator.number,
                         floorNum: otherElevator.destinationQueue[0],
                         up: otherElevator.goingUpIndicator(),
                         down: otherElevator.goingDownIndicator()
                     };
+
+                    if (otherElevator.destinationQueue.length == 1) {
+                        // 現在向かっているのが最終移動先の場合
+                        // そのフロアで押下されている方向の乗客をそのまま乗せることになるので
+                        // 押下されている方向で更新
+                        if (floorButton[otherElevatorGoFloor.floorNum].up
+                            && !floorButton[otherElevatorGoFloor.floorNum].down) {
+
+                            otherElevatorGoFloor.up = true;
+                            otherElevatorGoFloor.down = false;
+ 
+                        } else if (!floorButton[otherElevatorGoFloor.floorNum].up
+                            && floorButton[otherElevatorGoFloor.floorNum].down) {
+
+                            otherElevatorGoFloor.up = false;
+                            otherElevatorGoFloor.down = true;
+                        }
+
+                        // 移動先フロアで上下両方押されている、またはどちらも押されていない場合には
+                        // 現在のエレベータのインジケータを優先
+                    }
+
+                    return otherElevatorGoFloor;
                 });
         }
 
@@ -71,8 +95,13 @@
             // 移動先候補
             const gotoChoices = this.getPushedFloorButtons().filter((pushedFloorButton) => {
                 // 他のエレベータが向かっているフロア＆方向は除外
+                // (ただし、自分の方が2フロア以上近い場合には除外しない)
                 return !otherElevatorGoFloors.some((otherElevatorGoFloor) => {
+                    const distanceByTargetElevator = Math.abs(pushedFloorButton.floorNum - currentFloorNum)
+                    const distanceByOtherElevator = Math.abs(pushedFloorButton.floorNum - otherElevatorGoFloor.floorNum)
+
                     return pushedFloorButton.floorNum == otherElevatorGoFloor.floorNum
+                            && distanceByOtherElevator < (distanceByTargetElevator + 2)
                             && ((pushedFloorButton.indicator == "up" && otherElevatorGoFloor.up)
                                 || (pushedFloorButton.indicator == "down" && otherElevatorGoFloor.down));
                 })
