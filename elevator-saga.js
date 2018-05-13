@@ -138,15 +138,41 @@
                 `elevator${elevator.number} [goToPressedFloor]`
                 + ` nearGotoChoice:${JSON.stringify(nearGotoChoice)}`);
 
+            // 一番近い移動先フロアで押下されている方向が、今いるフロアの方向だった場合
+            // さらに1つ離れたフロアで今いるフロアの方向のものがあれば、効率を考えてそちらを選択する
+            // 
+            // 例: 現在フロアが1で、一番近い移動先フロアが2で下向きの場合、3で下向きがあれば3を選択
+            let gotoFloor = nearGotoChoice;
+            if (nearGotoChoice.floorNum <= currentFloorNum
+                && nearGotoChoice.indicator == "up" && elevator.goingUpIndicator()) {
+
+                gotoFloor = gotoChoices.find(gotoChoice => {
+                    return gotoChoice.indicator == "up" && gotoChoice.floorNum == (nearGotoChoice.floorNum - 1);
+                }) || gotoFloor; // なければ元のフロア
+
+            } else if (nearGotoChoice.floorNum > currentFloorNum
+                && nearGotoChoice.indicator == "down" && elevator.goingDownIndicator()) {
+
+                gotoFloor = gotoChoices.find(gotoChoice => {
+                    return gotoChoice.indicator == "down" && gotoChoice.floorNum == (nearGotoChoice.floorNum + 1);
+                }) || gotoFloor; // なければ元のフロア
+            }
+
+            if (gotoFloor != nearGotoChoice) {
+                console.log(
+                    `elevator${elevator.number} [goToPressedFloor]`
+                    + ` Change gotoFloor:${gotoFloor.floorNum} nearGotoChoice:${nearGotoChoice.floorNum}`);
+            }
+                
             // 移動
-            if (nearGotoChoice.indicator == "up") {
+            if (gotoFloor.indicator == "up") {
                 elevator.goingUpIndicator(true);
                 elevator.goingDownIndicator(false);
             } else {
                 elevator.goingUpIndicator(false);
                 elevator.goingDownIndicator(true);
             }
-            elevator.goToFloor(nearGotoChoice.floorNum);
+            elevator.goToFloor(gotoFloor.floorNum);
         }
 
         // 一番近くいる停止中で乗客がいないエレベータを取得する関数
