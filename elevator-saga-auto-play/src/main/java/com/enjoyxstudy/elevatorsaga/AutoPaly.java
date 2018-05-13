@@ -31,6 +31,8 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 public class AutoPaly implements AutoCloseable {
 
+    private static final boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
+
     private static final Object lockObject = new Object();
 
     private static final List<Integer> ALL_CHALLENGE_NUMBERS = Collections.unmodifiableList(
@@ -43,7 +45,7 @@ public class AutoPaly implements AutoCloseable {
     public static void main(String[] args) throws IOException, ParseException {
 
         if (System.getProperty("webdriver.chrome.driver") == null) {
-            System.setProperty("webdriver.chrome.driver", "driver/chromedriver.exe");
+            System.setProperty("webdriver.chrome.driver", WebDriverUtils.defualtDriverPath());
         }
 
         CommandLineParser parser = new DefaultParser();
@@ -218,12 +220,25 @@ public class AutoPaly implements AutoCloseable {
             Clipboard clipboard = toolkit.getSystemClipboard();
             clipboard.setContents(new StringSelection(script), null);
 
-            new Actions(driver)
-                    .sendKeys(Keys.chord(Keys.CONTROL, "a"))
-                    .sendKeys(Keys.chord(Keys.DELETE))
-                    .sendKeys(Keys.chord(Keys.CONTROL, "v"))
-                    .build()
-                    .perform();
+            if (isWindows) {
+                // Windows
+                new Actions(driver)
+                        .sendKeys(Keys.chord(Keys.CONTROL , "a"))
+                        .sendKeys(Keys.chord(Keys.DELETE))
+                        .sendKeys(Keys.chord(Keys.CONTROL, "v"))
+                        .build()
+                        .perform();
+
+            } else {
+                // Mac
+                // https://stackoverflow.com/questions/11750447/performing-a-copy-and-paste-with-selenium-2
+                new Actions(driver)
+                        .sendKeys(Keys.chord(Keys.COMMAND, "a"))
+                        .sendKeys(Keys.chord(Keys.DELETE))
+                        .sendKeys(Keys.chord(Keys.SHIFT, Keys.INSERT))
+                        .build()
+                        .perform();
+            }
         }
     }
 

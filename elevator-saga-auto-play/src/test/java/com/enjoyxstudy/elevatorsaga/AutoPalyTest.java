@@ -10,14 +10,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class AutoPalyTest {
 
+    @BeforeClass
+    public static void setup() {
+        System.setProperty("webdriver.chrome.driver", WebDriverUtils.defualtDriverPath());
+    }
+
     @Test
     public void play() throws URISyntaxException, IOException {
-
-        System.setProperty("webdriver.chrome.driver", "driver/chromedriver.exe");
 
         Path scriptPath = Paths.get(AutoPalyTest.class.getResource("script.txt").toURI());
         String script = new String(Files.readAllBytes(scriptPath), StandardCharsets.UTF_8);
@@ -34,8 +38,6 @@ public class AutoPalyTest {
     @Test
     public void playAllChallenge() throws URISyntaxException, IOException {
 
-        System.setProperty("webdriver.chrome.driver", "driver/chromedriver.exe");
-
         Path scriptPath = Paths.get(AutoPalyTest.class.getResource("script.txt").toURI());
         String script = new String(Files.readAllBytes(scriptPath), StandardCharsets.UTF_8);
 
@@ -51,8 +53,6 @@ public class AutoPalyTest {
 
     @Test
     public void playAllChallengeParallel() throws URISyntaxException, IOException {
-
-        System.setProperty("webdriver.chrome.driver", "driver/chromedriver.exe");
 
         Path scriptPath = Paths.get(AutoPalyTest.class.getResource("script.txt").toURI());
         String script = new String(Files.readAllBytes(scriptPath), StandardCharsets.UTF_8);
