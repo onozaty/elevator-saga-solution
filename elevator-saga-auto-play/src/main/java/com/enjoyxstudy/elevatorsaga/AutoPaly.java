@@ -128,9 +128,13 @@ public class AutoPaly implements AutoCloseable {
 
         return challengeNumbers.stream()
                 .parallel()
-                .map(x -> {
+                .map(challengeNumber -> {
                     try (AutoPaly autoPaly = new AutoPaly()) {
-                        return autoPaly.play(x, script, numberOfPlay);
+                        try {
+                            return autoPaly.play(challengeNumber, script, numberOfPlay);
+                        } catch (Exception e) {
+                            throw new AutoPlayException(challengeNumber, e);
+                        }
                     }
                 })
                 .collect(Collectors.toList());
@@ -147,8 +151,12 @@ public class AutoPaly implements AutoCloseable {
         try (AutoPaly autoPaly = new AutoPaly()) {
 
             return challengeNumbers.stream()
-                    .map(x -> {
-                        return autoPaly.play(x, script, numberOfPlay);
+                    .map(challengeNumber -> {
+                        try {
+                            return autoPaly.play(challengeNumber, script, numberOfPlay);
+                        } catch (Exception e) {
+                            throw new AutoPlayException(challengeNumber, e);
+                        }
                     })
                     .collect(Collectors.toList());
         }
@@ -186,7 +194,7 @@ public class AutoPaly implements AutoCloseable {
         driver.findElement(By.cssSelector("#button_apply")).click();
 
         // 結果取得(待ち合わせ)
-        WebDriverWait wait = new WebDriverWait(driver, 60);
+        WebDriverWait wait = new WebDriverWait(driver, 120);
         WebElement feedbackElement = wait
                 .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".feedback h2")));
 
@@ -223,7 +231,7 @@ public class AutoPaly implements AutoCloseable {
             if (isWindows) {
                 // Windows
                 new Actions(driver)
-                        .sendKeys(Keys.chord(Keys.CONTROL , "a"))
+                        .sendKeys(Keys.chord(Keys.CONTROL, "a"))
                         .sendKeys(Keys.chord(Keys.DELETE))
                         .sendKeys(Keys.chord(Keys.CONTROL, "v"))
                         .build()
@@ -245,5 +253,14 @@ public class AutoPaly implements AutoCloseable {
     @Override
     public void close() {
         driver.quit();
+    }
+
+    private static class AutoPlayException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        private AutoPlayException(int challengeNumber, Throwable cause) {
+            super("An error occurred in Challenge #" + challengeNumber, cause);
+        }
     }
 }
