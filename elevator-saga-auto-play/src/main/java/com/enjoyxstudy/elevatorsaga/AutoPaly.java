@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
@@ -42,7 +43,7 @@ public class AutoPaly implements AutoCloseable {
 
     private final WebDriver driver = new ChromeDriver();
 
-    public static void main(String[] args) throws IOException, ParseException {
+    public static void main(String[] args) throws IOException {
 
         if (System.getProperty("webdriver.chrome.driver") == null) {
             System.setProperty("webdriver.chrome.driver", WebDriverUtils.defualtDriverPath());
@@ -51,76 +52,113 @@ public class AutoPaly implements AutoCloseable {
         CommandLineParser parser = new DefaultParser();
 
         Options options = new Options();
-        options.addOption(Option.builder("p").desc("Play parallel").build());
-        options.addOption(Option.builder("c").desc("Challenge numbers").hasArg().build());
-        options.addOption(Option.builder("n").desc("Number of play").hasArg().build());
+        options.addOption(
+                Option.builder("f")
+                        .desc("Script file path.")
+                        .hasArg()
+                        .argName("file")
+                        .required()
+                        .build());
+        options.addOption(
+                Option.builder("p")
+                        .desc("Play parallel. (default non parallel)")
+                        .hasArg(false)
+                        .build());
+        options.addOption(
+                Option.builder("c")
+                        .desc("Challenge numbers. (default all challenges)\n'-c 1,2,3' play challenge #1, #2, #3.")
+                        .hasArg()
+                        .argName("challenges")
+                        .build());
+        options.addOption(
+                Option.builder("n")
+                        .desc("Number of play. (default 10)")
+                        .hasArg()
+                        .argName("numer")
+                        .build());
 
-        CommandLine line = parser.parse(options, args);
+        try {
+            CommandLine line = parser.parse(options, args);
 
-        boolean isParallel = line.hasOption("p");
+            boolean isParallel = line.hasOption("p");
 
-        List<Integer> challengeNumbers = ALL_CHALLENGE_NUMBERS;
-        if (line.hasOption("c")) {
-            challengeNumbers = Stream.of(line.getOptionValue("c").split(","))
-                    .map(x -> Integer.valueOf(x.trim()))
-                    .collect(Collectors.toList());
-        }
+            List<Integer> challengeNumbers = ALL_CHALLENGE_NUMBERS;
+            if (line.hasOption("c")) {
+                challengeNumbers = Stream.of(line.getOptionValue("c").split(","))
+                        .map(x -> Integer.valueOf(x.trim()))
+                        .collect(Collectors.toList());
+            }
 
-        int numberOfPlay = 10;
-        if (line.hasOption("n")) {
-            numberOfPlay = Integer.parseInt(line.getOptionValue("n"));
-        }
+            int numberOfPlay = 10;
+            if (line.hasOption("n")) {
+                numberOfPlay = Integer.parseInt(line.getOptionValue("n"));
+            }
 
-        String script = new String(Files.readAllBytes(Paths.get(line.getArgs()[0])), StandardCharsets.UTF_8);
+            String script = new String(Files.readAllBytes(Paths.get(line.getOptionValue("f"))), StandardCharsets.UTF_8);
 
-        System.out.println(
-                String.format(
-                        "Start auto play.\n* Play parallel    : %s\n* Challenge numbers: %s\n* Number of play   : %s",
-                        isParallel,
-                        challengeNumbers,
-                        numberOfPlay));
-
-        long startTime = System.currentTimeMillis();
-
-        List<ChallengeResult> results = isParallel
-                ? playChallengesParallel(challengeNumbers, script, numberOfPlay)
-                : playChallenges(challengeNumbers, script, numberOfPlay);
-
-        long totalTime = System.currentTimeMillis() - startTime;
-
-        int allTotalCount = results.stream()
-                .map(ChallengeResult::getTotalCount)
-                .mapToInt(Integer::intValue)
-                .sum();
-
-        int allSuccessCount = results.stream()
-                .map(ChallengeResult::getSuccessCount)
-                .mapToInt(Integer::intValue)
-                .sum();
-
-        System.out.println(
-                String.format(
-                        "Finish. Total time: %,d seconds",
-                        totalTime / 1000));
-
-        System.out.println("--------------------------------------------");
-        System.out.println(
-                String.format(
-                        "All         : %6.2f (%d/%d)",
-                        allSuccessCount / (double) allTotalCount * 100,
-                        allSuccessCount,
-                        allTotalCount));
-
-        for (ChallengeResult result : results) {
             System.out.println(
                     String.format(
-                            "Challenge %2d: %6.2f (%d/%d)",
-                            result.getChallengeNumber(),
-                            result.getSuccessCount() / (double) result.getTotalCount() * 100,
-                            result.getSuccessCount(),
-                            result.getTotalCount()));
+                            "Start auto play.\n* Play parallel    : %s\n* Challenge numbers: %s\n* Number of play   : %s",
+                            isParallel,
+                            challengeNumbers,
+                            numberOfPlay));
+
+            long startTime = System.currentTimeMillis();
+
+            List<ChallengeResult> results = isParallel
+                    ? playChallengesParallel(challengeNumbers, script, numberOfPlay)
+                    : playChallenges(challengeNumbers, script, numberOfPlay);
+
+            long totalTime = System.currentTimeMillis() - startTime;
+
+            int allTotalCount = results.stream()
+                    .map(ChallengeResult::getTotalCount)
+                    .mapToInt(Integer::intValue)
+                    .sum();
+
+            int allSuccessCount = results.stream()
+                    .map(ChallengeResult::getSuccessCount)
+                    .mapToInt(Integer::intValue)
+                    .sum();
+
+            System.out.println(
+                    String.format(
+                            "Finish. Total time: %,d seconds",
+                            totalTime / 1000));
+
+            System.out.println("--------------------------------------------");
+            System.out.println(
+                    String.format(
+                            "All         : %6.2f (%d/%d)",
+                            allSuccessCount / (double) allTotalCount * 100,
+                            allSuccessCount,
+                            allTotalCount));
+
+            for (ChallengeResult result : results) {
+                System.out.println(
+                        String.format(
+                                "Challenge %2d: %6.2f (%d/%d)",
+                                result.getChallengeNumber(),
+                                result.getSuccessCount() / (double) result.getTotalCount() * 100,
+                                result.getSuccessCount(),
+                                result.getTotalCount()));
+            }
+            System.out.println("--------------------------------------------");
+
+        } catch (ParseException e) {
+            System.out.println("Unexpected exception:" + e.getMessage());
+            printUsage(options);
+            return;
         }
-        System.out.println("--------------------------------------------");
+    }
+
+    private static void printUsage(Options options) {
+        HelpFormatter help = new HelpFormatter();
+        help.setWidth(100);
+
+        // ヘルプを出力
+        help.printHelp("java -jar elevator-saga-auto-play-all.jar", options, true);
+        System.exit(1);
     }
 
     public static List<ChallengeResult> playChallengesParallel(
@@ -194,7 +232,7 @@ public class AutoPaly implements AutoCloseable {
         driver.findElement(By.cssSelector("#button_apply")).click();
 
         // 結果取得(待ち合わせ)
-        WebDriverWait wait = new WebDriverWait(driver, 120);
+        WebDriverWait wait = new WebDriverWait(driver, 300);
         WebElement feedbackElement = wait
                 .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".feedback h2")));
 
