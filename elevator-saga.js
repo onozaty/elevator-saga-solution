@@ -47,7 +47,7 @@
                 .filter(elevator => elevator != targetElevator)
                 .map((otherElevator) => {
 
-                    otherElevatorGoFloor = {
+                    const otherElevatorGoFloor = {
                         elevatorNumber: otherElevator.number,
                         floorNum: otherElevator.destinationQueue[0],
                         up: otherElevator.goingUpIndicator(),
