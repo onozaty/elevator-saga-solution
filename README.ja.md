@@ -268,6 +268,6 @@ Challenge 18:  40.00 (80/200)
 
 Elevator Sageを自動実行するツールを作成しました。
 
-* [Elevator Saga auto play](./elevator-saga-auto-paly/README.md).
+* [Elevator Saga auto play](./elevator-saga-auto-play/README.md)
 
 これを使うとベンチマークが計測できますので、ぜひご利用ください。

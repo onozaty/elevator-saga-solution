@@ -6,7 +6,7 @@ It is a solution to Elevator Saga.
 
 The code is [elevator-saga.js](./elevator-saga.js).
 
-The success rate is as follows.
+This code cleared all Challenges. The success rate is as follows.
 
 ```
 Challenge  1: 100.00 (200/200)
@@ -54,6 +54,6 @@ Please check the details at the [code](./elevator-saga.js).
 
 I created a tool to automatically run Elevator Saga.
 
-* [Elevator Saga auto play](./elevator-saga-auto-paly/README.md).
+* [Elevator Saga auto play](./elevator-saga-auto-play/README.md)
 
 You can measure benchmarks with this.
