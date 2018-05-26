@@ -1,6 +1,6 @@
 # elevator-saga-auto-play
 
-This is an application that automatic run Elevator Saga.
+This is a tool that automatic run Elevator Saga.
 Elevator Saga challenge be executed repeatedly with the contents of the specified file.
 
 I created it for Elevator Saga benchmark!!

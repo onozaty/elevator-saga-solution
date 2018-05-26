@@ -1,6 +1,6 @@
 # elevator-saga-auto-play
 
-Elevator Sagaを自動実行するアプリケーションです。
+Elevator Sagaを自動実行するツールです。
 指定したファイルの内容で、Elevator SagaのChallengeを繰り返し実行することができます。
 
 Elevator Saga のベンチマークを取るために作りました。
