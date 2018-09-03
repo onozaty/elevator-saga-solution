@@ -33,6 +33,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 public class AutoPaly implements AutoCloseable {
 
     private static final boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
+    private static final boolean isLinux = System.getProperty("os.name").toLowerCase().startsWith("linux");
 
     private static final Object lockObject = new Object();
 
@@ -275,6 +276,13 @@ public class AutoPaly implements AutoCloseable {
                         .build()
                         .perform();
 
+            } else if(isLinux) {
+                new Actions(driver)
+                        .sendKeys(Keys.chord(Keys.CONTROL, "a"))
+                        .sendKeys(Keys.chord(Keys.DELETE))
+                        .sendKeys(Keys.chord(Keys.SHIFT, Keys.INSERT))
+                        .build()
+                        .perform();
             } else {
                 // Mac
                 // https://stackoverflow.com/questions/11750447/performing-a-copy-and-paste-with-selenium-2

@@ -14,6 +14,10 @@ public class WebDriverUtils {
             return "driver/chromedriver-mac64";
         }
 
+	if (osName.startsWith("linux")) {
+		return "driver/chromedriver-linux64";
+	}
+
         throw new UnsupportedOperationException("対応していないOSです。 os.name:" + osName);
     }
 }
