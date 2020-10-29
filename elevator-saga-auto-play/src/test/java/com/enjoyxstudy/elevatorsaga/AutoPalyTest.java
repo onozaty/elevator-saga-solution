@@ -10,15 +10,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class AutoPalyTest {
-
-    @BeforeClass
-    public static void setup() {
-        System.setProperty("webdriver.chrome.driver", WebDriverUtils.defualtDriverPath());
-    }
 
     @Test
     public void play() throws URISyntaxException, IOException {

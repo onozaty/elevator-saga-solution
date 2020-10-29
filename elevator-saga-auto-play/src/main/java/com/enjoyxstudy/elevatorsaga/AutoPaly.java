@@ -30,6 +30,8 @@ import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import io.github.bonigarcia.wdm.WebDriverManager;
+
 public class AutoPaly implements AutoCloseable {
 
     private static final boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
@@ -42,13 +44,9 @@ public class AutoPaly implements AutoCloseable {
                     .boxed()
                     .collect(Collectors.toList()));
 
-    private final WebDriver driver = new ChromeDriver();
+    private final WebDriver driver;
 
     public static void main(String[] args) throws IOException {
-
-        if (System.getProperty("webdriver.chrome.driver") == null) {
-            System.setProperty("webdriver.chrome.driver", WebDriverUtils.defualtDriverPath());
-        }
 
         CommandLineParser parser = new DefaultParser();
 
@@ -206,6 +204,13 @@ public class AutoPaly implements AutoCloseable {
         return playChallenges(ALL_CHALLENGE_NUMBERS, script, numberOfPlay);
     }
 
+    public AutoPaly() {
+
+        WebDriverManager.chromedriver().setup();
+
+        this.driver = new ChromeDriver();
+    }
+
     public ChallengeResult play(int challengeNumber, String script, int numberOfPlay) {
 
         int successCount = 0;
@@ -270,26 +275,38 @@ public class AutoPaly implements AutoCloseable {
             if (isWindows) {
                 // Windows
                 new Actions(driver)
-                        .sendKeys(Keys.chord(Keys.CONTROL, "a"))
-                        .sendKeys(Keys.chord(Keys.DELETE))
-                        .sendKeys(Keys.chord(Keys.CONTROL, "v"))
+                        .keyDown(Keys.CONTROL)
+                        .sendKeys("a")
+                        .keyUp(Keys.CONTROL)
+                        .sendKeys(Keys.DELETE)
+                        .keyDown(Keys.CONTROL)
+                        .sendKeys("v")
+                        .keyUp(Keys.CONTROL)
                         .build()
                         .perform();
 
-            } else if(isLinux) {
+            } else if (isLinux) {
                 new Actions(driver)
-                        .sendKeys(Keys.chord(Keys.CONTROL, "a"))
-                        .sendKeys(Keys.chord(Keys.DELETE))
-                        .sendKeys(Keys.chord(Keys.SHIFT, Keys.INSERT))
+                        .keyDown(Keys.CONTROL)
+                        .sendKeys("a")
+                        .keyUp(Keys.CONTROL)
+                        .sendKeys(Keys.DELETE)
+                        .keyDown(Keys.SHIFT)
+                        .sendKeys(Keys.INSERT)
+                        .keyDown(Keys.UP)
                         .build()
                         .perform();
             } else {
                 // Mac
                 // https://stackoverflow.com/questions/11750447/performing-a-copy-and-paste-with-selenium-2
                 new Actions(driver)
-                        .sendKeys(Keys.chord(Keys.COMMAND, "a"))
-                        .sendKeys(Keys.chord(Keys.DELETE))
-                        .sendKeys(Keys.chord(Keys.SHIFT, Keys.INSERT))
+                        .keyDown(Keys.COMMAND)
+                        .sendKeys("a")
+                        .keyUp(Keys.COMMAND)
+                        .sendKeys(Keys.DELETE)
+                        .keyDown(Keys.SHIFT)
+                        .sendKeys(Keys.INSERT)
+                        .keyUp(Keys.SHIFT)
                         .build()
                         .perform();
             }
